@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,41 +10,21 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-type Ticket = {
-  id: string;
-  subject: string;
-  message: string;
-  status: "open" | "closed";
-  date: string;
-  response?: string;
-};
-
-const mockTickets: Ticket[] = [
-  {
-    id: "1",
-    subject: "Вопрос по модерации",
-    message: "Почему мой релиз отклонён?",
-    status: "open",
-    date: "2024-01-10",
-  },
-  {
-    id: "2",
-    subject: "Техническая поддержка",
-    message: "Не могу загрузить обложку",
-    status: "closed",
-    date: "2024-01-08",
-    response: "Проблема решена. Попробуйте ещё раз.",
-  },
-];
+import { storage, Ticket } from "@/lib/storage";
 
 const Tickets = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [newSubject, setNewSubject] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setTickets(storage.getTickets(user.id));
+    }
+  }, [user]);
 
   if (!user) {
     navigate("/auth");
@@ -52,20 +32,22 @@ const Tickets = () => {
   }
 
   const handleCreateTicket = () => {
-    if (!newSubject || !newMessage) {
+    if (!newSubject || !newMessage || !user) {
       toast.error("Заполните все поля");
       return;
     }
 
     const newTicket: Ticket = {
       id: Date.now().toString(),
+      userId: user.id,
       subject: newSubject,
       message: newMessage,
       status: "open",
       date: new Date().toISOString().split("T")[0],
     };
 
-    setTickets([newTicket, ...tickets]);
+    storage.saveTicket(newTicket);
+    setTickets(storage.getTickets(user.id));
     setNewSubject("");
     setNewMessage("");
     setDialogOpen(false);

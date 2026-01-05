@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
@@ -6,28 +6,32 @@ import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-type Release = {
-  id: string;
-  title: string;
-  artist: string;
-  status: "draft" | "moderation" | "approved" | "rejected";
-  genre: string;
-  cover?: string;
-};
-
-const mockReleases: Release[] = [
-  { id: "1", title: "Summer Vibes", artist: "Artist Name", status: "draft", genre: "Pop" },
-  { id: "2", title: "Night Dreams", artist: "Artist Name", status: "moderation", genre: "Electronic" },
-  { id: "3", title: "Rock On", artist: "Artist Name", status: "approved", genre: "Rock" },
-];
+import { storage, Release } from "@/lib/storage";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Releases = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [releases] = useState<Release[]>(mockReleases);
+  const [releases, setReleases] = useState<Release[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [deleteReleaseId, setDeleteReleaseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setReleases(storage.getReleases(user.id));
+    }
+  }, [user]);
 
   if (!user) {
     navigate("/auth");
@@ -43,6 +47,17 @@ const Releases = () => {
     };
     const variant = variants[status];
     return <Badge className={variant.className}>{variant.label}</Badge>;
+  };
+
+  const handleDelete = (id: string) => {
+    storage.deleteRelease(id);
+    setReleases(storage.getReleases(user.id));
+    setDeleteReleaseId(null);
+    toast.success("Релиз перемещён в корзину");
+  };
+
+  const handleEdit = (release: Release) => {
+    navigate("/releases/create", { state: { release } });
   };
 
   const filteredReleases = releases.filter((release) => {
@@ -81,25 +96,23 @@ const Releases = () => {
         </div>
       </header>
 
-      {/* Main */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Релизы</h1>
-            <p className="text-muted-foreground">Управляй своими треками</p>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Релизы</h1>
+            <p className="text-muted-foreground text-sm md:text-base">Управляй своими треками</p>
           </div>
           <Button
             size="lg"
             onClick={() => navigate("/releases/create")}
-            className="gradient-bg border-0"
+            className="gradient-bg border-0 w-full sm:w-auto"
           >
             <Icon name="Plus" size={20} />
             Создать релиз
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="glass p-6 rounded-2xl mb-6">
+        <div className="glass p-4 md:p-6 rounded-2xl mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label className="text-sm text-muted-foreground mb-2 block">Статус</label>
@@ -134,27 +147,33 @@ const Releases = () => {
           </div>
         </div>
 
-        {/* Releases Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredReleases.map((release) => (
-            <div key={release.id} className="glass p-6 rounded-2xl hover:scale-105 transition">
-              <div className="w-full aspect-square bg-gradient-to-br from-primary via-secondary to-accent rounded-xl mb-4 flex items-center justify-center">
-                <Icon name="Disc3" className="text-white" size={64} />
+            <div key={release.id} className="glass p-4 md:p-6 rounded-2xl hover:scale-105 transition">
+              <div className="w-full aspect-square bg-gradient-to-br from-primary via-secondary to-accent rounded-xl mb-4 flex items-center justify-center overflow-hidden">
+                {release.cover ? (
+                  <img src={release.cover} alt={release.albumTitle} className="w-full h-full object-cover" />
+                ) : (
+                  <Icon name="Disc3" className="text-white" size={64} />
+                )}
               </div>
-              <h3 className="text-xl font-bold mb-1">{release.title}</h3>
-              <p className="text-muted-foreground text-sm mb-3">{release.artist}</p>
-              <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg md:text-xl font-bold mb-1 truncate">{release.albumTitle}</h3>
+              <p className="text-muted-foreground text-sm mb-3 truncate">{release.albumArtists.join(", ")}</p>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 {getStatusBadge(release.status)}
                 <span className="text-sm text-muted-foreground">{release.genre}</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Icon name="Eye" size={16} />
-                  Просмотр
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(release)}>
                   <Icon name="Edit" size={16} />
                   Редактировать
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteReleaseId(release.id)}
+                >
+                  <Icon name="Trash2" size={16} />
                 </Button>
               </div>
             </div>
@@ -162,10 +181,12 @@ const Releases = () => {
         </div>
 
         {filteredReleases.length === 0 && (
-          <div className="glass p-12 rounded-2xl text-center">
+          <div className="glass p-8 md:p-12 rounded-2xl text-center">
             <Icon name="Music2" className="mx-auto mb-4 text-muted-foreground" size={64} />
-            <h3 className="text-2xl font-bold mb-2">Релизы не найдены</h3>
-            <p className="text-muted-foreground mb-6">Попробуйте изменить фильтры или создайте новый релиз</p>
+            <h3 className="text-xl md:text-2xl font-bold mb-2">Релизы не найдены</h3>
+            <p className="text-muted-foreground mb-6 text-sm md:text-base">
+              Попробуйте изменить фильтры или создайте новый релиз
+            </p>
             <Button onClick={() => navigate("/releases/create")} className="gradient-bg border-0">
               <Icon name="Plus" size={20} />
               Создать релиз
@@ -173,6 +194,26 @@ const Releases = () => {
           </div>
         )}
       </main>
+
+      <AlertDialog open={!!deleteReleaseId} onOpenChange={() => setDeleteReleaseId(null)}>
+        <AlertDialogContent className="glass">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить релиз?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Релиз будет перемещён в корзину. Вы сможете восстановить его позже.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteReleaseId && handleDelete(deleteReleaseId)}
+              className="bg-destructive text-white"
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

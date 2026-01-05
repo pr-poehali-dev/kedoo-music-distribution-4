@@ -7,6 +7,7 @@ import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { toast } from "sonner";
+import { storage } from "@/lib/storage";
 
 const Auth = () => {
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
@@ -22,16 +23,40 @@ const Auth = () => {
     e.preventDefault();
     
     if (mode === "login") {
-      setUser({ id: "1", email, username: "User" });
-      toast.success("Вход выполнен успешно!");
-      navigate("/dashboard");
+      const user = storage.findUser(email, password);
+      if (user) {
+        setUser({ id: user.id, email: user.email, username: user.username });
+        toast.success("Вход выполнен успешно!");
+        navigate("/dashboard");
+      } else {
+        toast.error("Неверный email или пароль");
+      }
     } else if (mode === "register") {
-      setUser({ id: "1", email, username });
+      const existingUsers = storage.getUsers();
+      if (existingUsers.find((u) => u.email === email)) {
+        toast.error("Пользователь с таким email уже существует");
+        return;
+      }
+      const newUser = {
+        id: Date.now().toString(),
+        email,
+        username,
+        password,
+      };
+      storage.saveUser(newUser);
+      setUser({ id: newUser.id, email: newUser.email, username: newUser.username });
       toast.success("Регистрация успешна!");
       navigate("/dashboard");
     } else {
-      toast.success("Письмо для сброса пароля отправлено на почту");
-      setMode("login");
+      const users = storage.getUsers();
+      const user = users.find((u) => u.email === email);
+      if (user && newPassword) {
+        storage.updateUser(user.id, { password: newPassword });
+        toast.success("Пароль успешно изменён");
+        setMode("login");
+      } else {
+        toast.error("Пользователь не найден");
+      }
     }
   };
 

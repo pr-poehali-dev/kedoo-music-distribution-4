@@ -13,12 +13,7 @@ const Wallet = () => {
     return null;
   }
 
-  const balance = 1250.50;
-  const transactions = [
-    { id: "1", type: "income", amount: 500, date: "2024-01-15", desc: "Выплата за стримы" },
-    { id: "2", type: "expense", amount: 100, date: "2024-01-10", desc: "Комиссия платформы" },
-    { id: "3", type: "income", amount: 850.50, date: "2024-01-05", desc: "Выплата за стримы" },
-  ];
+  const balance = 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,49 +39,23 @@ const Wallet = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8">Кошелёк</h1>
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        <h1 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8">Кошелёк</h1>
 
-        <div className="glass p-8 rounded-2xl mb-8 gradient-bg">
-          <p className="text-white/80 mb-2">Ваш баланс</p>
-          <h2 className="text-5xl font-bold text-white mb-6">{balance.toFixed(2)} ₽</h2>
-          <Button variant="secondary" size="lg">
+        <div className="glass p-6 md:p-8 rounded-2xl mb-6 md:mb-8 gradient-bg">
+          <p className="text-white/80 mb-2 text-sm md:text-base">Ваш баланс</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6">{balance.toFixed(2)} ₽</h2>
+          <Button variant="secondary" size="lg" className="w-full sm:w-auto">
             <Icon name="CreditCard" size={20} />
             Вывести средства
           </Button>
         </div>
 
-        <div className="glass p-8 rounded-2xl">
-          <h3 className="text-2xl font-bold mb-6">История транзакций</h3>
-          <div className="space-y-4">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex justify-between items-center glass p-4 rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      tx.type === "income" ? "bg-green-500/20" : "bg-red-500/20"
-                    }`}
-                  >
-                    <Icon
-                      name={tx.type === "income" ? "ArrowDownLeft" : "ArrowUpRight"}
-                      className={tx.type === "income" ? "text-green-500" : "text-red-500"}
-                      size={24}
-                    />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{tx.desc}</p>
-                    <p className="text-sm text-muted-foreground">{tx.date}</p>
-                  </div>
-                </div>
-                <span
-                  className={`font-bold text-xl ${
-                    tx.type === "income" ? "text-green-500" : "text-red-500"
-                  }`}
-                >
-                  {tx.type === "income" ? "+" : "-"}{tx.amount} ₽
-                </span>
-              </div>
-            ))}
+        <div className="glass p-6 md:p-8 rounded-2xl">
+          <h3 className="text-xl md:text-2xl font-bold mb-6">История транзакций</h3>
+          <div className="text-center py-8 md:py-12">
+            <Icon name="Wallet" className="mx-auto mb-4 text-muted-foreground" size={64} />
+            <p className="text-muted-foreground text-sm md:text-base">Транзакций пока нет</p>
           </div>
         </div>
       </main>

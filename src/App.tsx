@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState, createContext, useContext } from "react";
+import { useState, createContext, useContext, useEffect } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -14,6 +14,7 @@ import Tickets from "./pages/Tickets";
 import Wallet from "./pages/Wallet";
 import Trash from "./pages/Trash";
 import Settings from "./pages/Settings";
+import { storage, User as StorageUser } from "./lib/storage";
 
 const queryClient = new QueryClient();
 
@@ -41,15 +42,45 @@ export const useAuth = () => {
 
 const App = () => {
   const [user, setUser] = useState<User>(null);
-  const [theme, setTheme] = useState("default");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("kedoo_theme") || "default";
+  });
+
+  useEffect(() => {
+    const currentUser = storage.getCurrentUser();
+    if (currentUser) {
+      setUser({
+        id: currentUser.id,
+        email: currentUser.email,
+        username: currentUser.username,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("kedoo_theme", theme);
+  }, [theme]);
+
+  const handleSetUser = (newUser: User) => {
+    setUser(newUser);
+    if (newUser) {
+      const storageUser = storage.getUsers().find((u) => u.id === newUser.id);
+      if (storageUser) {
+        storage.setCurrentUser(storageUser);
+      }
+    } else {
+      storage.setCurrentUser(null);
+    }
+  };
 
   const logout = () => {
     setUser(null);
+    storage.setCurrentUser(null);
   };
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ user, setUser, theme, setTheme, logout }}>
+      <AuthContext.Provider value={{ user, setUser: handleSetUser, theme, setTheme, logout }}>
         <div data-theme={theme}>
           <TooltipProvider>
             <Toaster />

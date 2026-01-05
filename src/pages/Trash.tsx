@@ -1,24 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
-
-type DeletedRelease = {
-  id: string;
-  title: string;
-  artist: string;
-  deletedDate: string;
-};
+import { storage, Release } from "@/lib/storage";
 
 const Trash = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [releases, setReleases] = useState<DeletedRelease[]>([
-    { id: "1", title: "Old Track", artist: "Artist", deletedDate: "2024-01-10" },
-  ]);
+  const [releases, setReleases] = useState<Release[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      setReleases(storage.getTrash(user.id));
+    }
+  }, [user]);
 
   if (!user) {
     navigate("/auth");
@@ -26,12 +24,14 @@ const Trash = () => {
   }
 
   const handleRestore = (id: string) => {
-    setReleases(releases.filter((r) => r.id !== id));
+    storage.restoreFromTrash(id);
+    setReleases(storage.getTrash(user.id));
     toast.success("Релиз восстановлен");
   };
 
   const handleDeletePermanently = (id: string) => {
-    setReleases(releases.filter((r) => r.id !== id));
+    storage.deleteFromTrashPermanently(id);
+    setReleases(storage.getTrash(user.id));
     toast.success("Релиз удалён навсегда");
   };
 
@@ -65,23 +65,24 @@ const Trash = () => {
         {releases.length > 0 ? (
           <div className="space-y-4">
             {releases.map((release) => (
-              <div key={release.id} className="glass p-6 rounded-2xl flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-bold">{release.title}</h3>
-                  <p className="text-muted-foreground">{release.artist}</p>
-                  <p className="text-sm text-muted-foreground">Удалено: {release.deletedDate}</p>
+              <div key={release.id} className="glass p-4 md:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg md:text-xl font-bold">{release.albumTitle}</h3>
+                  <p className="text-muted-foreground text-sm">{release.albumArtists.join(", ")}</p>
+                  <p className="text-sm text-muted-foreground">Удалено: {release.createdAt}</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => handleRestore(release.id)}>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => handleRestore(release.id)} className="flex-1 sm:flex-none">
                     <Icon name="RotateCcw" size={20} />
                     Восстановить
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={() => handleDeletePermanently(release.id)}
+                    className="flex-1 sm:flex-none"
                   >
                     <Icon name="Trash2" size={20} />
-                    Удалить навсегда
+                    Удалить
                   </Button>
                 </div>
               </div>
